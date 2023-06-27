@@ -1,0 +1,11 @@
+.env
+
+/api-interface/.env
+
+/firebasekeys.js
+
+/jsonSchemas
+
+/node_modules
+
+/api-interface/node_modules

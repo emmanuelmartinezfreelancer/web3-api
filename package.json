@@ -1,0 +1,21 @@
+{
+  "name": "minter",
+  "version": "1.0.0",
+  "description": "id3 NFT Collection",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Emmanuel Martinez",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.0",
+    "@truffle/hdwallet-provider": "^2.1.11",
+    "dotenv": "^16.1.3",
+    "express": "^4.18.2",
+    "morgan": "^1.10.0",
+    "truffle": "^5.9.2",
+    "truffle-contract": "^4.0.31",
+    "web3": "^1.10.0"
+  }
+}
