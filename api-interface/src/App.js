@@ -23,7 +23,7 @@ function App() {
 
         setjsonPassword(passwordJSON);
         setAuthorized(true);
-        setActiveView("introduccion")
+        setActiveView("dashboard")
 
       } else {
 
@@ -63,11 +63,11 @@ function App() {
           activeView === 'dashboard' && 
 
           <div className="flex flex-col w-full h-screen bg-gray-100 p-16 items-center justify-center gap-6">
-            <h1 className="text-4xl font-semibold pt-16 pl-10 uppercase">
-              ¡Bienvenido al mundo de la Web 3.0!
-            </h1>
+
+            { !authorized ? 
+            <>
             <h1 className="text-2xl font-light text-center">
-                Con esta API puedes gestionar el Smart Contract de ID3, <br />por favor abre el JSON con el password para desbloquear la interfaz.
+                Hola, por favor abre el JSON con el password para desbloquear la interfaz.
             </h1>
             <div className="w-1/2 flex justify-center border-gray-900 border-[1px] hover:border-gray-600 rounded-xl py-3">
                 <input
@@ -76,6 +76,22 @@ function App() {
                 onChange={ handleFileChange }
                 />
             </div>
+
+            </>
+
+            :
+
+            <>
+            <h1 className="text-4xl font-semibold pt-16 pl-10 uppercase">
+              ¡Bienvenido al mundo de la Web 3.0!
+            </h1>
+            <h1 className="text-2xl font-light text-center">
+                Con esta API puedes gestionar el Smart Contract de ID3, <br />utiliza el submenú para documentarte y utilizarlo.
+            </h1>
+
+            </>
+
+          }
          </div>
 
         }
@@ -188,6 +204,81 @@ function App() {
         </div>
 
         }
+
+
+        {
+        activeView === 'mint' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+        <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[220px] ">¿Qué es "mintear"?</p>
+        <p className="pl-10 text-xl">
+        "Mintear" es simplemente la traducción al español del término inglés "minting" que, en el contexto de las criptomonedas y la tecnología blockchain, se refiere al proceso de creación de nuevos tokens.
+        <br />
+        <br />
+        Para las criptomonedas, "mintear" se refiere a la creación de nuevas monedas. Este es un término comúnmente utilizado en la minería de criptomonedas, donde los mineros obtienen nuevas monedas como recompensa por su trabajo de validar y registrar las transacciones en la cadena de bloques.
+        <br />
+        <br />
+        En el caso de los tokens no fungibles (NFTs), "mintear" se refiere a la creación de un nuevo NFT en la cadena de bloques. Al mintear un NFT, estás registrando en la blockchain la propiedad de un activo digital único, proporcionando una prueba irrefutable de autenticidad y propiedad.   
+        <br />
+        <br />
+        Cada vez que se mintea un token o una moneda, se genera una transacción que se graba en la blockchain, proporcionando un rastro transparente y seguro de la creación del nuevo token o moneda.
+        </p>
+        </div>
+
+        }
+
+        {
+        activeView === 'storage' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+
+        <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[440px]">¿Qué es el almacenamiento distribuido?</p>
+        <p className="pl-10 text-xl">
+        El almacenamiento distribuido es un sistema en el que los datos se almacenan en una red de múltiples nodos, en lugar de en un solo lugar central. Cada nodo en la red mantiene una copia de los datos o una porción de los datos. Este enfoque tiene varios beneficios, como la redundancia (si un nodo falla, los datos aún están disponibles en otros nodos), la resistencia a ataques y censura, y la posibilidad de acceder y recuperar datos más rápidamente desde el nodo más cercano.
+        <br />
+        <br />
+        La tecnología blockchain es un tipo de sistema de almacenamiento distribuido. En una blockchain, todas las transacciones se registran en bloques que se enlazan entre sí para formar una cadena. Cada nodo en la red blockchain mantiene una copia de toda la cadena de bloques, por lo que la información es altamente resistente a la censura y a la manipulación, y no hay un único punto de falla.
+        <br />
+        <br />
+        En la práctica, el almacenamiento distribuido en blockchains se utiliza para una variedad de propósitos, desde mantener un registro seguro de las transacciones de criptomonedas hasta almacenar datos para contratos inteligentes y aplicaciones descentralizadas (dApps).
+        <br />
+        <br />
+        Es importante mencionar que debido al costo y a la capacidad limitada de almacenamiento en las blockchains, a menudo se utilizan en combinación con otras soluciones de almacenamiento distribuido, como IPFS (InterPlanetary File System), para almacenar datos que son demasiado grandes para la blockchain. En estos casos, la blockchain puede utilizarse para almacenar pequeñas piezas de información que verifican la integridad y la propiedad de los datos almacenados en otra parte.
+        
+        </p>
+
+        </div>
+
+        }
+
+        {
+        activeView === 'ipfs' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+
+        <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[74px]">IPFS</p>
+        <p className="pl-10 text-xl">
+        IPFS, o el Sistema de Archivos Interplanetario (InterPlanetary File System), es un protocolo de red y un sistema de archivos que está diseñado para hacer que la web sea más rápida, segura y abierta. IPFS es una forma de almacenamiento y acceso a datos, sitios web, aplicaciones y más, de manera descentralizada y distribuida.
+        <br />
+        <br />
+        El protocolo IPFS cambia la forma en que los datos se almacenan y se mueven alrededor de la web. En lugar de depender de ubicaciones específicas y centralizadas para alojar los datos (como ocurre con el protocolo HTTP que la web utiliza ampliamente), IPFS se basa en un sistema de archivos distribuido que localiza los datos basándose en su contenido, no en su ubicación. Esto se conoce como direccionamiento por contenido.
+        <br />
+        <br />
+        Cuando se carga un archivo a IPFS, se divide en bloques y se le asigna una identificación única llamada hash criptográfico. Este hash es una representación del contenido del archivo y no cambia a menos que el contenido del archivo cambie. Así, los usuarios pueden solicitar y acceder a los archivos en la red IPFS usando estos hashes, sin importar dónde estén almacenados físicamente.
+        <br />
+        <br />
+        El IPFS se utiliza en una variedad de aplicaciones, desde la distribución descentralizada de contenido hasta la creación de sitios web completamente distribuidos. En el contexto de blockchain y criptomonedas, IPFS se utiliza a menudo en combinación con Ethereum y otras cadenas de bloques para almacenar datos que son demasiado grandes para almacenar directamente en la cadena de bloques.
+        <br />
+        <br />
+        Por ejemplo, en el caso de los tokens no fungibles (NFT), a menudo se utiliza IPFS para almacenar la información o el contenido del arte digital que representa el NFT, mientras que la propiedad del NFT se registra en la cadena de bloques de Ethereum.
+          
+        </p>
+
+        </div>
+
+        }
+
+
 
       </main>
     </div>

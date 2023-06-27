@@ -7,32 +7,49 @@ import { BiSolidRightArrow, BiSolidDownArrow } from "react-icons/bi";
 export default function Sidebar({ authorized, activeview, setActiveView }) {
 
   const [activeMenu, setActiveMenu] = useState("");
+  const [activeMainMenu, setActiveMainMenu] = useState("");
 
   useEffect(() => {
     console.log(authorized);
   }, [authorized, activeview, activeMenu]);
 
   return (
-    <aside className="w-1/6 bg-white h-screen p-8 border-r-2 border-gray-600">
+    <aside className="w-[370px] bg-white h-screen p-8 border-r-2 border-gray-600">
       <div className="flex flex-col w-full gap-3">
-        <img src="/id3logo.svg" className="w-5/12" alt="logo" />
+        <img onClick={()=>{  setActiveView("dashboard") }} src="/id3logo.svg" className="w-5/12 cursor-pointer" alt="logo" />
         <div className="flex flex-row gap-2 mt-2 pb-2 border-gray-200 border-b-2">
           <GrUserAdmin className="text-2xl my-auto" />
-          <h1 className="text-lg text-left font-semibold">ID3 Admin</h1>
+          <h1 className="text-lg text-left font-semibold">Key concepts</h1>
+          { activeMainMenu === "keyconcepts" ?
+
+            <BiSolidDownArrow  
+            className="text-base ml-auto my-auto hover:text-gray-400 cursor-pointer"     
+            onClick={()=>{
+              setActiveMainMenu("");
+            }}
+            />
+            :
+            <BiSolidRightArrow
+            className="text-base ml-auto my-auto hover:text-gray-400 cursor-pointer" 
+            onClick={()=>{
+              setActiveMainMenu("keyconcepts");
+            }}
+            />
+          
+
+          }
         </div>
 
-        { 
-        authorized && (
-          <>
+        { activeMainMenu === "keyconcepts" ?
           <ul className="flex flex-col w-full gap-2">
 
             <li
               onClick={(e) => {
                 setActiveView("introduccion");
               }}
-              className=""
+              className={`-mx-3 -my-1 ${activeview === "introduccion" ? "bg-gray-400" : "bg-white"}`}
             >
-              <p className="cursor-pointer hover:text-gray-400 text-base">
+              <p className={`pl-3 py-1 ${activeview === "introduccion" ? "text-white cursor-default" : "cursor-pointer hover:text-gray-400"} text-base`}>
                 Smart Contract
               </p>
             </li>
@@ -41,9 +58,9 @@ export default function Sidebar({ authorized, activeview, setActiveView }) {
               onClick={(e) => {
                 setActiveView("wallet");
               }}
-              className=""
+              className={`-mx-3 -my-1 ${activeview === "wallet" ? "bg-gray-400" : "bg-white"}`}
             >
-              <p className="cursor-pointer hover:text-gray-400 text-base">
+              <p className={`pl-3 py-1 ${activeview === "wallet" ? "text-white cursor-default" : "cursor-pointer hover:text-gray-400"} text-base`}>
                 Wallet
               </p>
             </li>
@@ -53,24 +70,69 @@ export default function Sidebar({ authorized, activeview, setActiveView }) {
               onClick={(e) => {
                 setActiveView("gas");
               }}
-              className=""
+              className={`-mx-3 -my-1 ${activeview === "gas" ? "bg-gray-400" : "bg-white"}`}
             >
-              <p className="cursor-pointer hover:text-gray-400 text-base">
+              <p className={`pl-3 py-1 ${activeview === "gas" ? "text-white cursor-default" : "cursor-pointer hover:text-gray-400"} text-base`}>
                 Gas
               </p>
             </li>
 
             <li
               onClick={(e) => {
+                setActiveView("mint");
+              }}
+              className={`-mx-3 -my-1 ${activeview === "mint" ? "bg-gray-400" : "bg-white"}`}
+            >
+              <p className={`pl-3 py-1 ${activeview === "mint" ? "text-white cursor-default" : "cursor-pointer hover:text-gray-400"} text-base`}>
+                Mint
+              </p>
+            </li>
+
+            <li
+              onClick={(e) => {
+                setActiveView("storage");
+              }}
+              className={`-mx-3 -my-1 ${activeview === "storage" ? "bg-gray-400" : "bg-white"}`}
+            >
+              <p className={`pl-3 py-1 ${activeview === "storage" ? "text-white cursor-default" : "cursor-pointer hover:text-gray-400"} text-base`}>
+                Almacenamiento distribuido
+              </p>
+            </li>
+
+            <li
+              onClick={(e) => {
+                setActiveView("ipfs");
+              }}
+              className={`-mx-3 -my-1 ${activeview === "ipfs" ? "bg-gray-400" : "bg-white"}`}
+            >
+              <p className={`pl-3 py-1 ${activeview === "ipfs" ? "text-white cursor-default" : "cursor-pointer hover:text-gray-400"} text-base`}>
+                IPFS
+              </p>
+            </li>
+
+
+            <li
+              onClick={(e) => {
                 setActiveView("about");
               }}
-              className=""
+              className={`-mx-3 -my-1 ${activeview === "about" ? "bg-gray-400" : "bg-white"}`}
             >
-              <p className="cursor-pointer hover:text-gray-400 text-base">
+              <p className={`pl-3 py-1 ${activeview === "about" ? "text-white cursor-default" : "cursor-pointer hover:text-gray-400"} text-base`}>
                 Acerca de
               </p>
             </li>
+
+
           </ul>
+          :
+          null
+          }
+
+        { 
+        authorized && (
+          <>
+
+
 
           <div className="flex flex-row gap-2 mt-2 pb-2 border-gray-200 border-b-2">
              <AiFillApi className="text-2xl my-auto" />
@@ -78,7 +140,7 @@ export default function Sidebar({ authorized, activeview, setActiveView }) {
           </div>
           
           <div className="flex flex-row ">
-          <p className="cursor-pointer hover:text-gray-400 text-base">Getters</p>
+          <p className={`cursor-pointer hover:text-gray-400 text-base`}>Getters</p>
           { activeMenu === "getters" ? 
             <BiSolidDownArrow  
             className="text-base ml-auto my-auto hover:text-gray-400 cursor-pointer"     
