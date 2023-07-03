@@ -8,12 +8,7 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBKcxGr9zzRWDqjEt6yRgys4nBv0gEFN4g",
-  authDomain: "esat-alpha-26c1b.firebaseapp.com",
-  projectId: "esat-alpha-26c1b",
-  storageBucket: "esat-alpha-26c1b.appspot.com",
-  messagingSenderId: "8313852575",
-  appId: "1:8313852575:web:8c2ec047893b5541dec8aa"
+
 };
 
 
