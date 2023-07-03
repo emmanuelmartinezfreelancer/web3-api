@@ -1,5 +1,8 @@
 import Sidebar from './components/Sidebar';
 import { useState, useEffect  } from "react";
+import { useAuth } from "./context/authContext";
+import { UseOnceCollection } from './components/UseOnceCollection';
+import { Alert } from "./components/Alert";
 
 
 function App() {
@@ -7,12 +10,93 @@ function App() {
   const [activeView, setActiveView] = useState('dashboard');
   const [ jsonPassword, setjsonPassword ] = useState('');
   const [ authorized, setAuthorized ] = useState(false);
+  const [error, setError] = useState("");
+  const [adminView, setadminView] = useState(false)
+  
 
   const password = "123456";
 
+  const adminsCollection = UseOnceCollection('admin');;
+
   useEffect(() => {
     console.log("Autorizada", authorized);
-  }, [authorized, activeView]);
+  }, [authorized, activeView, adminsCollection.length]);
+
+
+  const { user, logout } = useAuth();
+  
+  const { login, loginWithGoogle, resetPassword } = useAuth();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      await login(user.email, user.password);
+
+    } catch (error) {
+        if (error.code === "auth/internal-error"){
+                
+            setError("Correo inválido/Introduce un password");
+
+        } else if(error.code === "auth/user-not-found" ) {
+
+            setError("El usuario no existe")
+
+        } else if(error.code === "auth/wrong-password") {
+        
+            setError("Contraseña incorrecta")
+        } 
+    }
+  };
+
+
+  const handleGoogleSignin = async () => {
+
+    let adminsCollectionMail = [];
+
+    for (let admin of adminsCollection) {
+      if (admin.email) {
+        adminsCollectionMail.push(admin.email);
+      }
+    }
+
+    try {
+      console.log("adminsCollection", adminsCollectionMail);
+    
+      await loginWithGoogle().then((result) => {
+        const user = result.user;
+    
+        if (adminsCollectionMail.includes(user.email)) {
+          setadminView(true)
+          //setActiveView("dashboard");
+          console.log("Autorizado")
+        } else {
+          logout();
+          setError("No tienes permisos de administrador");
+          setTimeout(() => {
+            setError("");
+          }
+          , 4000);
+        }
+      }).catch((error) => {
+        console.error('Error during login:', error);
+      });
+    
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+  e.preventDefault();
+  if (!user.email) return setError("Write an email to reset password");
+  try {
+    await resetPassword(user.email);
+    setError('We sent you an email. Check your inbox')
+  } catch (error) {
+    setError(error.message);
+  }
+};
 
   const parseJson = (content) => {
     try {
@@ -56,7 +140,7 @@ function App() {
     <div className="App">
       <main className="w-full h-screen flex flex-row">
 
-          <Sidebar authorized = {authorized} activeview= { activeView } setActiveView = { setActiveView } />
+          <Sidebar authorized = {authorized} activeview= { activeView } setActiveView = { setActiveView } adminview= { adminView } setadminview= { setadminView } />
 
           { 
 
@@ -83,10 +167,10 @@ function App() {
 
             <>
             <h1 className="text-4xl font-semibold pt-16 pl-10 uppercase">
-              ¡Bienvenido al mundo de la Web 3.0!
+              ¡Bienvenido/a al mundo de la Web 3.0!
             </h1>
             <h1 className="text-2xl font-light text-center">
-                Con esta API puedes gestionar el Smart Contract de ID3, <br />utiliza el submenú para documentarte y utilizarlo.
+                Con esta API puedes gestionar el Smart Contract de ID3, <br />utiliza el submenú para documentarte y utilizarla.
             </h1>
 
             </>
@@ -99,7 +183,7 @@ function App() {
         { 
 
         activeView === 'introduccion' &&
-          <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+            <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">
 
             <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[310px] ">¿Qué es un Smart Contract?</p>
             <p className="pl-10 text-xl">Un contrato inteligente, o "smart contract", es un programa de computadora que facilita, verifica, ejecuta y hace cumplir la negociación o el cumplimiento de un contrato. <span className="font-semibold">Los contratos inteligentes permiten la realización de transacciones y acuerdos creíbles sin la necesidad de terceros.</span>
@@ -122,7 +206,7 @@ function App() {
         {
         activeView === 'wallet' && 
 
-        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">
         <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[240px] ">¿Qué es una Wallet?</p>
         <p className="pl-10 text-xl">
         Una "wallet" o billetera (a veces llamada monedero en español) en el contexto de las criptomonedas es un medio de almacenar información digital para administrar las monedas o NFTs que un usuario posee.
@@ -160,7 +244,7 @@ function App() {
         {
         activeView === 'gas' && 
 
-        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">
         <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[190px] ">¿Qué es el gas?</p>
         <p className="pl-10 text-xl">
         Usemos como ejemplo el contexto de la red Ethereum, "gas" se refiere a la unidad que mide la cantidad de esfuerzo computacional que se requiere para ejecutar operaciones específicas, como enviar transacciones o ejecutar contratos inteligentes. Cuando realizas una acción en Ethereum, como enviar Ether (la criptomoneda nativa de Ethereum) o interactuar con un contrato inteligente, necesitas pagar una tarifa de gas para compensar a los validadores por el uso de la red.
@@ -196,10 +280,10 @@ function App() {
         {
         activeView === 'about' && 
 
-        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">
         <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[300px] ">¿Cómo funciona esta API?</p>
         <p className="pl-10 text-xl">
-          Funciona shingón
+          Funciona bien
         </p>
         </div>
 
@@ -209,7 +293,7 @@ function App() {
         {
         activeView === 'mint' && 
 
-        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">
         <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[220px] ">¿Qué es "mintear"?</p>
         <p className="pl-10 text-xl">
         "Mintear" es simplemente la traducción al español del término inglés "minting" que, en el contexto de las criptomonedas y la tecnología blockchain, se refiere al proceso de creación de nuevos tokens.
@@ -230,7 +314,7 @@ function App() {
         {
         activeView === 'storage' && 
 
-        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">
 
         <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[440px]">¿Qué es el almacenamiento distribuido?</p>
         <p className="pl-10 text-xl">
@@ -254,7 +338,7 @@ function App() {
         {
         activeView === 'ipfs' && 
 
-        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">
 
         <p className="text-2xl font-light pl-3 mt-16 py-3 ml-10 border-gray-900 border-[1px] hover:border-gray-600 rounded-xl w-[74px]">IPFS</p>
         <p className="pl-10 text-xl">
@@ -278,8 +362,1178 @@ function App() {
 
         }
 
+        { authorized && activeView === 'gettersmain' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Getters</p>
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'gettokenid' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/getcurrenttoken</p>
+       
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+
+        </div>
+        
+        }
+
+        { authorized && activeView === 'gettokenprice' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/gettokenprice</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+
+        </div>
+        
+        }
+
+        { authorized && activeView === 'istudent' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/isstudentenrolled</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+
+        </div>
+        
+        }
+
+        { authorized && activeView === 'getdiploma' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/getstudentdiploma</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'getbeneficiary' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/getbeneficiarywallet</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'settersmain' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Setters</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'setstudent' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/isstudentsetter</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'setbeneficiarywallet' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/setbeneficiarywallet</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'settokenprice' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/settokenprice</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+
+        </div>
+        
+        }
+
+        { authorized && activeView === 'mintersmain' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Minters</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+
+        </div>
+        
+        }
+
+        { authorized && activeView === 'mintdiploma' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/mintdiploma</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'mintdiplomawithprice' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/minttokenwithprice</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+
+        </div>
+        
+        }
+
+        { authorized && activeView === 'mintfreetoken' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/mintfreetoken</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        
+        </div>
+        
+        }
+
+        { authorized && activeView === 'editsmain' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Edits</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'edittokenuri' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/edittokenuri</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'editdiploma' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/editdiploma</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'utilitiesmain' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Utilities</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'walletbalance' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/getwalletbalance</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'walletaddress' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/getwalletaddress</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'pullfunds' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/pullfundsfromcontract</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'validatetoken' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/validatetoken</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'deletemain' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Delete</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'deletetoken' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/deletetoken</p>
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'deletediploma' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/deletediploma</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'deletestudent' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/deletestudentenrolled</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'pauseunpausemain' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Pause / Unpause</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'pausecontract' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/pausecontract</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { authorized && activeView === 'unpausecontract' && 
+
+        <div className="flex flex-col w-full h-screen bg-gray-100 pl-16 pt-16 gap-6 pr-36">       
+        <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">/unpausecontract</p>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        <br />
+        Donec erat nibh, dictum id lacus at, feugiat rhoncus lacus. Maecenas dictum justo quis leo lobortis dictum. Fusce fermentum porta elit sed ornare. Praesent sapien risus, molestie luctus eleifend sed, malesuada eget tortor. Cras viverra lacinia libero id hendrerit. Sed urna nunc, mollis sit amet nibh ac, iaculis tempus odio. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin a metus sollicitudin dolor rhoncus euismod. Donec ullamcorper varius quam et venenatis. 
+        </p>
+
+        <div className="w-full bg-sky-950 rounded-xl p-14 h-[330px] text-white text-lg ml-10">
+          <p>
+          {`try {`}<br></br>
+          {`let currentToken = await contractID3.methods.getCurrentTokenId().call({ from:accounts[0]})`}<br></br>
+          {`return currentToken;`}<br></br>
+          {`} catch (error) {`}
+          <br></br>
+          {`console.error(error);`}
+          <br></br>
+          {`} finally {`}
+          <br></br>
+          {`console.log('Finally');`}
+          <br></br>
+          {`}`}
+          </p>
+        </div>
+
+        <p className="ml-10">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas convallis eros dolor, at tristique lacus pellentesque ut. Fusce dolor ligula, euismod at ante id, congue maximus nisi. Vivamus scelerisque ex leo. Ut metus erat, volutpat at felis sit amet, posuere bibendum ex. Nam ut egestas nisi. Ut facilisis eros lectus, in ornare arcu porttitor non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec tortor est, dictum nec auctor id, commodo a lorem. Nunc sed tempor felis. Suspendisse potenti. Fusce sit amet pharetra tellus. Proin ultrices malesuada fermentum. Aliquam ante est, ultricies eget nisi quis, hendrerit imperdiet metus. Curabitur porttitor at lacus ultrices tempor. Vivamus pulvinar fermentum leo non gravida.
+        </p>
+        </div>
+        
+        }
+
+        { activeView === 'adminlogin' &&
+        
+        <div className="w-full">
+
+        {error && <Alert message={error} />}
+
+        {
+         user && user.email ? 
+
+         <div className="flex flex-col w-full h-screen bg-gray-100 p-16 items-center justify-center gap-6">
+         <h1 className="text-4xl font-semibold pt-16 pl-10 uppercase text-center w-full">
+         ¡Bienvenido/a {user.displayName}!
+          </h1>
+         <h1 className="text-3xl font-light text-center w-full">
+           Utiliza el submenú  de Smart Contract para interactuar con el.
+        </h1>
+        </div>
+
+         :
+        
+        <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6 justify-center">
+
+        <div className="w-4/12 justify-center align-center mx-auto border-gray-900 border-[1px] rounded-xl px-4">
+
+        <p className="text-2xl font-light mt-16 py-3 border-gray-900 border-b-[1px]  hover:border-gray-600  w-3/4 text-center mx-auto">Admin Dashboard</p>
+
+        <form
+        onSubmit={handleSubmit}
+        className="rounded sm:pt-8 md:pt-6 pb-8 mb-4 w-3/4 mx-auto"
+        >
+        <h1 className="text-center font-helveticaL sm:text-2xl md:text-4xl tracking-widest" >BIENVENIDO/A</h1>
+        <div className="sm:pt-8 md:pt-8 mb-8">
+          <label
+            htmlFor="email"
+            className="block text-base font-semibold mb-2 font-helveticaL"
+          >
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            id="email"
+            
+            className="bg-transparent  rounded w-full py-2 px-3 text-black leading-tight focus:outline-none focus:shadow-outline border-gray-900 border-[1px]"          
+          />
+        </div>
+        <div className="mb-4">
+          <label
+            htmlFor="password"
+            className="block text-base font-semibold mb-2 font-helveticaL"
+          >
+            Password
+          </label>
+          <input
+            type="password"
+            name="password"
+            id="password"
+            
+            className="bg-transparent  rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-gray-900 border-[1px]"
+          />
+        </div>
+
+        <div className="flex items-center justify-between sm:pt-3 md:pt-0">
+          <button
+            className="hover:text-gray-500 font-bold rounded focus:outline-none focus:shadow-outline font-helveticaL text-sm"
+            type="submit"
+          >
+            Sign In
+          </button>
+          <a
+            className="inline-block align-baseline font-bold text-sm font-helveticaL hover:text-gray-500"
+            href="#!"
+            onClick={handleResetPassword}
+          >
+            Forgot Password?
+          </a>
+        </div>
+
+        <button
+        onClick={handleGoogleSignin}
+        className="border border-[black] rounded hover:bg-[#D68500] hover:text-white text-black text-black shadow rounded bg-transparent border border-white mt-8 py-2 px-4 w-full"
+      >
+        Google
+      </button> 
+
+      <hr className="bg-grey my-8 h-px bg-white border-0 dark:bg-[#40E0D0"/>
 
 
+        </form>
+
+        
+        
+        </div>
+
+        </div>
+        }
+        </div>
+       
+        }
+
+        { adminView && activeView === 'stats' && 
+
+          <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">       
+          <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Stats</p>
+          </div>
+
+        }
+
+        { adminView && activeView === 'create' && 
+          
+          <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">  
+          
+          <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Create</p>
+          
+          </div>
+        }
+
+        { adminView && activeView === 'edit' && 
+         <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6"> 
+          
+          <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Edit</p>
+
+          </div>      
+        }
+
+        { adminView && activeView === 'delete' && 
+          <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6"> 
+
+              <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Delete</p>
+          
+          </div>        
+        }
+
+        { adminView && activeView === 'withdraw' && 
+          <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">   
+              <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Withdraw</p>
+          </div>     
+        }
+
+        { adminView && activeView === 'validate' && 
+           <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">    
+              <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Validate</p>
+           </div>    
+        }
+
+        { adminView && activeView === 'settings' && 
+            <div className="flex flex-col w-full h-screen bg-gray-100 p-16 gap-6">      
+              <p className="text-2xl font-light  mt-16 py-3 ml-10 border-gray-900 border-b-[1px] hover:border-gray-600 w-[74px]">Settings</p>
+              </div>     
+        }
+
+          
       </main>
     </div>
   );
